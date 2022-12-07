@@ -4,8 +4,10 @@ import datetime
 import paho.mqtt.client as mqtt
 
 i2c_port_num = 1
-pcf_address = 0x24
-pcf = PCF8574(i2c_port_num, pcf_address)
+pcfs = {
+    '20': PCF8574(i2c_port_num, 0x20),
+    '24': PCF8574(i2c_port_num, 0x24)
+}
 
 current_state = {}
 
@@ -25,14 +27,17 @@ client.on_connect = on_connect
 client.connect("localhost", 1883, 60)
 
 while True:
-    state = pcf.port
-    new_state = []
-    for i in range(len(state)):
-        topic = "/trains/track/sensor/" + str(i)
-        value = "INACTIVE" if state[i] else "ACTIVE"
-        if current_state.get(topic) != value:
-            print(topic, "->", value)
-            client.publish(topic, value)
-    now = datetime.datetime.now()
-    while datetime.datetime.now() - now < datetime.timedelta(seconds=1):
-        client.loop(timeout=1.0)
+    try:
+        for key in pcfs:
+            state = pcfs[key].port
+            for i in range(len(state)):
+                topic = "/trains/track/sensor/" + key + "/" + str(i)
+                value = "INACTIVE" if state[i] else "ACTIVE"
+                if current_state.get(topic) != value:
+                    print(topic, "->", value)
+                    client.publish(topic, value)
+        now = datetime.datetime.now()
+        while datetime.datetime.now() - now < datetime.timedelta(seconds=1):
+            client.loop(timeout=1.0)
+    except Exception as e:
+        print(e)
