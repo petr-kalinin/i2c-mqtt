@@ -44,8 +44,8 @@ while True:
                     client.publish(topic, value)
                     last_time[topic] = now
         now = datetime.datetime.now()
-        while datetime.datetime.now() - now < datetime.timedelta(seconds=1):
-            client.loop(timeout=1.0)
+        while datetime.datetime.now() - now < datetime.timedelta(seconds=0.3):
+            client.loop(timeout=0.3)
     except Exception as e:
         pass
         logging.error("Error!")
