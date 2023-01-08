@@ -1,7 +1,11 @@
 #!/usr/bin/python3
+import traceback
 from pcf8574 import PCF8574
 import datetime
 import paho.mqtt.client as mqtt
+import logging
+
+logging.basicConfig(format='%(asctime)s:%(filename)s:%(lineno)d: %(message)s', level=logging.DEBUG)
 
 i2c_port_num = 1
 pcfs = {
@@ -10,15 +14,16 @@ pcfs = {
 }
 
 current_state = {}
+last_time = {}
 
 def on_message(client, userdata, msg):
     topic = msg.topic
     value = msg.payload.decode()
-    print("Recv: ", msg.topic, value)
+    logging.info("Recv: %s %s " % (msg.topic, value))
     current_state[msg.topic] = value
 
 def on_connect(client, userdata, flags, rc):
-    print("Connected with result code "+str(rc))
+    logging.info("Connected with result code "+str(rc))
     client.subscribe("/trains/#")
 
 client = mqtt.Client()
@@ -28,16 +33,21 @@ client.connect("localhost", 1883, 60)
 
 while True:
     try:
+        now = datetime.datetime.now()
         for key in pcfs:
             state = pcfs[key].port
             for i in range(len(state)):
                 topic = "/trains/track/sensor/" + key + "/" + str(i)
                 value = "INACTIVE" if state[i] else "ACTIVE"
-                if current_state.get(topic) != value:
-                    print(topic, "->", value)
+                if current_state.get(topic) != value or last_time.get(topic) < now - datetime.timedelta(minutes = 1):
+                    logging.info("%s -> %s" % (topic, value))
                     client.publish(topic, value)
+                    last_time[topic] = now
         now = datetime.datetime.now()
         while datetime.datetime.now() - now < datetime.timedelta(seconds=1):
             client.loop(timeout=1.0)
     except Exception as e:
-        print(e)
+        pass
+        logging.error("Error!")
+        logging.error(e)
+        logging.error(traceback.format_exc())
