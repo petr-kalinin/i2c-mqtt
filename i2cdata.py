@@ -24,7 +24,7 @@ def on_message(client, userdata, msg):
 
 def on_connect(client, userdata, flags, rc):
     logging.info("Connected with result code "+str(rc))
-    client.subscribe("/trains/#")
+    client.subscribe("#")
 
 client = mqtt.Client()
 client.on_message = on_message
@@ -37,7 +37,7 @@ while True:
         for key in pcfs:
             state = pcfs[key].port
             for i in range(len(state)):
-                topic = "/trains/track/sensor/" + key + "/" + str(i)
+                topic = "track/sensor/" + key + "/" + str(i)
                 value = "INACTIVE" if state[i] else "ACTIVE"
                 if current_state.get(topic) != value or last_time.get(topic) < now - datetime.timedelta(minutes = 1):
                     logging.info("%s -> %s" % (topic, value))
